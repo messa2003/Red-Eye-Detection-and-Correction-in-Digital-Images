@@ -1,0 +1,21 @@
+{
+	"bmi-installation" : null,
+	"compiler-frontend-variant" : "MSVC",
+	"compiler-id" : "MSVC",
+	"compiler-simulate-id" : "",
+	"config" : "Debug",
+	"cxx-modules" : {},
+	"dir-cur-bld" : "C:/Users/radua/CLionProjects/Proiect_PI/cmake-build-debug",
+	"dir-cur-src" : "C:/Users/radua/CLionProjects/Proiect_PI",
+	"dir-top-bld" : "C:/Users/radua/CLionProjects/Proiect_PI/cmake-build-debug",
+	"dir-top-src" : "C:/Users/radua/CLionProjects/Proiect_PI",
+	"exports" : [],
+	"forward-modules-from-target-dirs" : [],
+	"include-dirs" : 
+	[
+		"C:\\Users\\radua\\OneDrive\\Desktop\\opencv\\build\\include"
+	],
+	"language" : "CXX",
+	"linked-target-dirs" : [],
+	"module-dir" : "C:/Users/radua/CLionProjects/Proiect_PI/cmake-build-debug/CMakeFiles/Proiect_PI.dir"
+}

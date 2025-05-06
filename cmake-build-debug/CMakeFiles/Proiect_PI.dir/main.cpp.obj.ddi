@@ -1,0 +1,14 @@
+{
+    "version": 1,
+    "revision": 0,
+    "rules": [
+        {
+            "primary-output": "CMakeFiles\\Proiect_PI.dir\\main.cpp.obj",
+            "outputs": [
+                "C:\\Users\\radua\\CLionProjects\\Proiect_PI\\cmake-build-debug\\vc140.pdb",
+                "CMakeFiles\\Proiect_PI.dir\\main.cpp.obj.ddi"
+            ],
+            "requires": []
+        }
+    ]
+}

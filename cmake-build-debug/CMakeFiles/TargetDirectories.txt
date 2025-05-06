@@ -1,0 +1,3 @@
+C:/Users/radua/CLionProjects/Proiect_PI/cmake-build-debug/CMakeFiles/Proiect_PI.dir
+C:/Users/radua/CLionProjects/Proiect_PI/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/radua/CLionProjects/Proiect_PI/cmake-build-debug/CMakeFiles/rebuild_cache.dir
