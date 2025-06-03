@@ -474,14 +474,17 @@ Mat extract_circular_objects(Mat source) {
     Mat circular_objects = Mat::zeros(source.size(), CV_8UC1);
     vector<ObjectInfo> object_ratios;
 
-    // Praguri ajustate
-    const float min_thinness_ratio = 0.4;
-    const float min_area_ratio = 0.0005;  // Aria minima ca proportie din imagine
-    const float max_area_ratio = 0.01;    // Aria maxima ca proportie din imagine
-    const int min_area_absolute = 50;     // Aria minima absoluta
-    const float max_y_diff_ratio = 0.1;   // Diferența maxima pe axa Y 10% din inaltime
+    const float min_thinness_ratio = 0.55;
+    const float min_area_ratio = 0.0002;
+    const float max_area_ratio = 0.003;
+    const int min_area_absolute = 60;
+    const float max_y_diff_ratio = 0.20;
+    const float min_x_dist_ratio = 0.10;
+    const float max_aspect_ratio = 1.3;
+    const float max_y_pos_ratio = 0.65;
 
     for (int label = 1; label <= no_labels; label++) {
+        // Extragem obiectul curent
         Mat object_instance = Mat::zeros(source.size(), CV_8UC1);
         for (int i = 0; i < source.rows; i++) {
             for (int j = 0; j < source.cols; j++) {
@@ -491,60 +494,85 @@ Mat extract_circular_objects(Mat source) {
             }
         }
 
-        int area = compute_area(object_instance);
-        perimeter obj_perimeter = naive_perimeter(object_instance);
+        // Umplem gaurile din obiect
+        Mat filled_object = fill_holes(object_instance);
+
+        // Calculam aria si perimetrul pe obiectul umplut
+        int area = compute_area(filled_object);
+        perimeter obj_perimeter = naive_perimeter(filled_object);
 
         if (obj_perimeter.length > 0 && area > min_area_absolute) {
             float thinness_ratio = compute_thinness_ratio(area, obj_perimeter.length);
             float area_ratio = static_cast<float>(area) / (source.rows * source.cols);
 
-            if (thinness_ratio >= min_thinness_ratio &&
-                area_ratio >= min_area_ratio &&
-                area_ratio <= max_area_ratio) {
-                int sum_i = 0, sum_j = 0, count = 0;
-                for (int i = 0; i < source.rows; i++) {
-                    for (int j = 0; j < source.cols; j++) {
-                        if (object_instance.at<uchar>(i, j) == 255) {
-                            sum_i += i;
-                            sum_j += j;
-                            count++;
-                        }
+            // Calculam centrul de masa si bounding box
+            int min_i = source.rows, max_i = 0;
+            int min_j = source.cols, max_j = 0;
+            int sum_i = 0, sum_j = 0, count = 0;
+
+            for (int i = 0; i < source.rows; i++) {
+                for (int j = 0; j < source.cols; j++) {
+                    if (filled_object.at<uchar>(i, j) == 255) {
+                        sum_i += i;
+                        sum_j += j;
+                        count++;
+                        min_i = min(min_i, i);
+                        max_i = max(max_i, i);
+                        min_j = min(min_j, j);
+                        max_j = max(max_j, j);
                     }
                 }
-                int centroid_i = count > 0 ? sum_i / count : 0;
-                int centroid_j = count > 0 ? sum_j / count : 0;
+            }
+
+            int centroid_i = count > 0 ? sum_i / count : 0;
+            int centroid_j = count > 0 ? sum_j / count : 0;
+
+            // Calculam aspect ratio
+            float width = max_j - min_j + 1;
+            float height = max_i - min_i + 1;
+            float aspect_ratio = width / height;
+
+            // Verificam daca obiectul este suficient de circular, are dimensiuni corecte si e in jumatatea superioara
+            if (thinness_ratio >= min_thinness_ratio &&
+                area_ratio >= min_area_ratio &&
+                area_ratio <= max_area_ratio &&
+                aspect_ratio <= max_aspect_ratio &&
+                aspect_ratio >= 1.0f/max_aspect_ratio &&
+                (static_cast<float>(centroid_i) / source.rows) <= max_y_pos_ratio) {
                 object_ratios.push_back({thinness_ratio, label, centroid_i, centroid_j});
             }
         }
     }
 
-    // sortare dupa thinness ratio descrescator
+    // Sortam obiectele dupa thinness ratio descrescator
     sort(object_ratios.begin(), object_ratios.end(),
          [](const ObjectInfo& a, const ObjectInfo& b) {
              return a.thinness_ratio > b.thinness_ratio;
          });
 
-    // selectam maxim 2 obiecte, verifica dif pe axa Y
+    // Selectam maxim 2 obiecte, verificand simetria pe Y și distanta minima pe X
     vector<ObjectInfo> selected_objects;
     int max_y_diff = static_cast<int>(source.rows * max_y_diff_ratio);
+    int min_x_dist = static_cast<int>(source.cols * min_x_dist_ratio);
 
-    for (size_t i = 0; i < object_ratios.size() && selected_objects.size() < 2; i++) {
-        bool valid = true;
-
-        // daca exista deja un obiect selectat, verificam diferenta pe axa Y
-        if (!selected_objects.empty()) {
-            int y_diff = abs(selected_objects[0].centroid_i - object_ratios[i].centroid_i);
-            if (y_diff > max_y_diff) {
-                valid = false;
+    for (size_t i = 0; i < object_ratios.size(); i++) {
+        for (size_t j = i + 1; j < object_ratios.size(); j++) {
+            int y_diff = abs(object_ratios[i].centroid_i - object_ratios[j].centroid_i);
+            int x_dist = abs(object_ratios[i].centroid_j - object_ratios[j].centroid_j);
+            // Verificam simetria pe Y si distanta minimă pe X
+            if (y_diff <= max_y_diff && x_dist >= min_x_dist) {
+                selected_objects.push_back(object_ratios[i]);
+                selected_objects.push_back(object_ratios[j]);
+                goto found_pair;
             }
         }
-
-        if (valid) {
-            selected_objects.push_back(object_ratios[i]);
-        }
+    }
+found_pair:
+    if (selected_objects.empty() && !object_ratios.empty()) {
+        selected_objects.push_back(object_ratios[0]);
     }
 
-    // marcam obiectele selectate
+    // Marcam obiectele selectate
     for (const auto& obj : selected_objects) {
         int label = obj.label;
         for (int i = 0; i < source.rows; i++) {
@@ -556,7 +584,6 @@ Mat extract_circular_objects(Mat source) {
         }
     }
 
-    // debugging, afisam centrul
     Mat debug_image = circular_objects.clone();
     cvtColor(debug_image, debug_image, COLOR_GRAY2BGR);
     for (const auto& obj : selected_objects) {
@@ -585,4 +612,40 @@ Mat correct_red_eyes(Mat original_image, Mat circular_objects) {
     }
 
     return corrected_image;
+}
+
+Mat fill_holes(Mat binary) {
+    // Algoritm: marcheaza tot ce e conectat la margine ca fundal (0->2), restul 0 devin 255 (gauri umplute)
+    Mat filled = binary.clone();
+    int rows = filled.rows, cols = filled.cols;
+    queue<pair<int, int>> q;
+    // Marcheaza marginile
+    for (int i = 0; i < rows; ++i) {
+        if (filled.at<uchar>(i, 0) == 0) { filled.at<uchar>(i, 0) = 2; q.push({i, 0}); }
+        if (filled.at<uchar>(i, cols-1) == 0) { filled.at<uchar>(i, cols-1) = 2; q.push({i, cols-1}); }
+    }
+    for (int j = 0; j < cols; ++j) {
+        if (filled.at<uchar>(0, j) == 0) { filled.at<uchar>(0, j) = 2; q.push({0, j}); }
+        if (filled.at<uchar>(rows-1, j) == 0) { filled.at<uchar>(rows-1, j) = 2; q.push({rows-1, j}); }
+    }
+    int di[4] = {-1, 1, 0, 0};
+    int dj[4] = {0, 0, -1, 1};
+    while (!q.empty()) {
+        int ci = q.front().first, cj = q.front().second; q.pop();
+        for (int d = 0; d < 4; ++d) {
+            int ni = ci + di[d], nj = cj + dj[d];
+            if (ni >= 0 && ni < rows && nj >= 0 && nj < cols && filled.at<uchar>(ni, nj) == 0) {
+                filled.at<uchar>(ni, nj) = 2;
+                q.push({ni, nj});
+            }
+        }
+    }
+    // Toate 0 ramase sunt gauri -> devin 255
+    for (int i = 0; i < rows; ++i)
+        for (int j = 0; j < cols; ++j)
+            if (filled.at<uchar>(i, j) == 0)
+                filled.at<uchar>(i, j) = 255;
+            else if (filled.at<uchar>(i, j) == 2)
+                filled.at<uchar>(i, j) = 0;
+    return filled;
 }

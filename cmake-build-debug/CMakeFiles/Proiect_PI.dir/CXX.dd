@@ -3,3 +3,5 @@ build CMakeFiles\Proiect_PI.dir\main.cpp.obj: dyndep
 
 build CMakeFiles\Proiect_PI.dir\functii.cpp.obj: dyndep
 
+build CMakeFiles\Proiect_PI.dir\ai_algorithm.cpp.obj: dyndep
+

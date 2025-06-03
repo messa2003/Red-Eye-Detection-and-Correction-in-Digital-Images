@@ -1,12 +1,13 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include "diverse.h"
+
 using namespace std;
 using namespace cv;
 
 int main() {
 
-    Mat image = imread(R"(C:\Users\radua\CLionProjects\Proiect_PI\Red_Eye1.jpg)");
+    Mat image = imread(R"(C:\Users\radua\CLionProjects\Proiect_PI\Red_Eye8.jpg)");
 
     imshow("image", image);
 
@@ -29,6 +30,10 @@ int main() {
     // Testare masca rosie
     Mat redMask = create_red_mask(hsv_channels);
     imshow("Red Eye Mask", redMask);
+
+    // Testare fill_holes
+    Mat redMask_filled = fill_holes(redMask);
+    imshow("Red Eye Mask - Holes Filled", redMask_filled);
 
     // Testare labeling
     labels two_pass_label = Two_pass_labeling(redMask);

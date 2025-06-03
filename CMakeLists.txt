@@ -8,7 +8,8 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 
 add_executable(Proiect_PI main.cpp
         diverse.h
-        functii.cpp)
+        functii.cpp
+        ai_algorithm.cpp)
 
 target_link_libraries(Proiect_PI ${OpenCV_LIBS})
 

@@ -69,4 +69,6 @@ Mat extract_circular_objects(Mat source);
 
 Mat correct_red_eyes(Mat original_image, Mat circular_objects);
 
+Mat fill_holes(Mat binary);
+
 #endif //DIVERSE_H
